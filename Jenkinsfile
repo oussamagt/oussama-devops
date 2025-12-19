@@ -11,7 +11,7 @@ pipeline {
         SONAR_HOST_URL = 'http://192.168.33.10:9000'
         
         DOCKER_HUB_CREDENTIALS = 'dockerhub-credentials'
-        DOCKER_IMAGE_NAME = 'oussamagt/timesheet-app'
+        DOCKER_IMAGE_NAME = 'guetatoussama/timesheet-app'
         DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
     }
     
