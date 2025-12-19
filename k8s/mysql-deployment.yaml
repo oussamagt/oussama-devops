@@ -1,23 +1,16 @@
-# 1. PersistentVolume
 apiVersion: v1
-kind: PersistentVolume
+kind: Secret
 metadata:
-  name: mysql-pv
-  namespace: devops
-spec:
-  capacity:
-    storage: 1Gi
-  accessModes:
-    - ReadWriteOnce
-  hostPath:
-    path: "/mnt/data/mysql"
+  name: mysql-secret
+type: Opaque
+stringData:
+  mysql-root-password: rootpassword
+  mysql-password: userpassword
 ---
-# 2. PersistentVolumeClaim
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mysql-pvc
-  namespace: devops
 spec:
   accessModes:
     - ReadWriteOnce
@@ -25,12 +18,10 @@ spec:
     requests:
       storage: 1Gi
 ---
-# 3. Deployment MySQL
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mysql
-  namespace: devops
 spec:
   replicas: 1
   selector:
@@ -46,11 +37,22 @@ spec:
         image: mysql:8.0
         env:
         - name: MYSQL_ROOT_PASSWORD
-          value: "root"
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-root-password
         - name: MYSQL_DATABASE
-          value: "timesheet"
+          value: timesheetdb
+        - name: MYSQL_USER
+          value: timesheet
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-password
         ports:
         - containerPort: 3306
+          name: mysql
         volumeMounts:
         - name: mysql-storage
           mountPath: /var/lib/mysql
@@ -59,12 +61,10 @@ spec:
         persistentVolumeClaim:
           claimName: mysql-pvc
 ---
-# 4. Service MySQL
 apiVersion: v1
 kind: Service
 metadata:
   name: mysql-service
-  namespace: devops
 spec:
   selector:
     app: mysql

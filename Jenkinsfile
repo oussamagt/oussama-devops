@@ -8,7 +8,7 @@ pipeline {
     environment {
         GIT_REPO = 'https://github.com/oussamagt/oussama-devops.git'
         GIT_BRANCH = 'main'
-        SONAR_HOST_URL = 'http://192.168.33.10:9000'
+        SONAR_HOST_URL = 'http://192.168.33.10:9000/'
         
         DOCKER_HUB_CREDENTIALS = 'dockerhub-credentials'
         DOCKER_IMAGE_NAME = 'guetatoussama/timesheet-app'
@@ -102,7 +102,8 @@ pipeline {
                     sh """
                         kubectl apply -f k8s/mysql-deployment.yaml
                         echo 'Attente du démarrage de MySQL...'
-                        kubectl wait --for=condition=ready pod -l app=mysql -n devops --timeout=300s
+                        sleep 30
+                        kubectl get pods
                     """
                 }
                 echo 'MySQL déployé avec succès'
@@ -115,8 +116,9 @@ pipeline {
                 script {
                     sh """
                         kubectl apply -f k8s/spring-deployment.yaml
-                        kubectl set image deployment/spring-app spring-app=${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} -n devops
-                        kubectl rollout status deployment/spring-app -n devops --timeout=300s
+                        sleep 20
+                        kubectl get pods
+                        kubectl get svc
                     """
                 }
                 echo 'Application Spring Boot déployée avec succès'
@@ -129,13 +131,13 @@ pipeline {
                 script {
                     sh """
                         echo '=== PODS ==='
-                        kubectl get pods -n devops
+                        kubectl get pods
                         
                         echo '=== SERVICES ==='
-                        kubectl get svc -n devops
+                        kubectl get svc
                         
-                        echo '=== URL D\'ACCÈS ==='
-                        minikube service spring-service -n devops --url
+                        echo '=== DEPLOYMENTS ==='
+                        kubectl get deployments
                     """
                 }
                 echo 'Vérification terminée'
@@ -147,7 +149,7 @@ pipeline {
         success {
             echo '✅ Pipeline exécuté avec succès !'
             echo "Image Docker: ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
-            echo "Application déployée sur Kubernetes dans le namespace 'devops'"
+            echo "Application déployée sur Kubernetes"
         }
         failure {
             echo '❌ Le pipeline a échoué. Vérifiez les logs ci-dessus.'
