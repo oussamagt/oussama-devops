@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     environment {
-        GIT_REPO = 'https://github.com/mariem49/timesheet_devops_mariem.git'
+        GIT_REPO = 'https://github.com/oussamagt/oussama-devops.git'
         GIT_BRANCH = 'main'
         SONAR_HOST_URL = 'http://192.168.33.10:9000'
         PROJECT_DIR = 'TP-Projet-2025'
