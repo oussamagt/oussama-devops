@@ -1,16 +1,17 @@
 pipeline {
     agent any
     
+    tools {
+        maven 'M2_HOME'
+    }
+    
     environment {
         GIT_REPO = 'https://github.com/oussamagt/oussama-devops.git'
         GIT_BRANCH = 'main'
         SONAR_HOST_URL = 'http://192.168.33.10:9000'
-        PROJECT_DIR = 'TP-Projet-2025'
-        MAVEN_HOME = '/usr/share/maven'
         
-        // Configuration Docker Hub
-        DOCKER_HUB_CREDENTIALS = 'dockerhub-credentials'  // ID des credentials dans Jenkins
-        DOCKER_IMAGE_NAME = 'tonusername/timesheet-app'  // CHANGE TON USERNAME ICI
+        DOCKER_HUB_CREDENTIALS = 'dockerhub-credentials'
+        DOCKER_IMAGE_NAME = 'oussamagt/timesheet-app'
         DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
     }
     
@@ -28,9 +29,7 @@ pipeline {
         stage('2. Nettoyage et Compilation') {
             steps {
                 echo 'Nettoyage et compilation du projet Maven...'
-                dir("${PROJECT_DIR}") {
-                    sh 'mvn clean compile -DskipTests'
-                }
+                sh 'mvn clean compile -DskipTests'
                 echo 'Nettoyage et compilation terminés'
             }
         }
@@ -38,30 +37,26 @@ pipeline {
         stage('3. Analyse SonarQube') {
             steps {
                 echo 'Analyse de la qualité du code avec SonarQube...'
-                dir("${PROJECT_DIR}") {
-                    withSonarQubeEnv('SonarQube-Server') {
-                        withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                            sh """
-                                mvn sonar:sonar \
-                                  -Dsonar.projectKey=timesheet-devops-mariem \
-                                  -Dsonar.projectName='Timesheet DevOps Mariem' \
-                                  -Dsonar.host.url=${SONAR_HOST_URL} \
-                                  -Dsonar.token=\${SONAR_TOKEN}
-                            """
-                        }
+                withSonarQubeEnv('sonarqube') {
+                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                        sh """
+                            mvn sonar:sonar \
+                              -Dsonar.projectKey=timesheet-devops-oussama \
+                              -Dsonar.projectName='Timesheet DevOps Oussama' \
+                              -Dsonar.host.url=${SONAR_HOST_URL} \
+                              -Dsonar.token=\${SONAR_TOKEN}
+                        """
                     }
                 }
                 echo 'Analyse SonarQube terminée'
-                echo "Consultez les résultats sur: ${SONAR_HOST_URL}/dashboard?id=timesheet-devops-mariem"
+                echo "Consultez les résultats sur: ${SONAR_HOST_URL}/dashboard?id=timesheet-devops-oussama"
             }
         }
         
         stage('4. Génération du fichier JAR') {
             steps {
                 echo 'Génération du fichier JAR...'
-                dir("${PROJECT_DIR}") {
-                    sh 'mvn package -DskipTests'
-                }
+                sh 'mvn package -DskipTests'
                 echo 'Fichier JAR généré avec succès'
             }
         }
@@ -69,14 +64,11 @@ pipeline {
         stage('5. Construction de l\'image Docker') {
             steps {
                 echo 'Construction de l\'image Docker...'
-                dir("${PROJECT_DIR}") {
-                    script {
-                        // Construction de l'image Docker
-                        sh """
-                            docker build -t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} .
-                            docker tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_NAME}:latest
-                        """
-                    }
+                script {
+                    sh """
+                        docker build -t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} .
+                        docker tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_NAME}:latest
+                    """
                 }
                 echo 'Image Docker construite avec succès'
             }
@@ -121,15 +113,9 @@ pipeline {
             steps {
                 echo 'Déploiement de l\'application Spring Boot sur Kubernetes...'
                 script {
-                    // Mise à jour de l'image dans le déploiement
                     sh """
-                        # Appliquer les configurations
                         kubectl apply -f k8s/spring-deployment.yaml
-                        
-                        # Mettre à jour l'image du déploiement avec la nouvelle version
                         kubectl set image deployment/spring-app spring-app=${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} -n devops
-                        
-                        # Attendre que le déploiement soit terminé
                         kubectl rollout status deployment/spring-app -n devops --timeout=300s
                     """
                 }
